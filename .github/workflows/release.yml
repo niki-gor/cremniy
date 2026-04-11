@@ -16,13 +16,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             artifact_name: cremniy-linux-${{ github.ref_name }}
-          - os: windows-latest
+          - os: windows-2022
             artifact_name: cremniy-windows-${{ github.ref_name }}
-          - os: macos-latest
+          - os: macos-14
             artifact_name: cremniy-macos-${{ github.ref_name }}
 
     steps:
