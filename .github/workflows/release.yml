@@ -149,6 +149,8 @@ jobs:
       - name: Test executable (Linux)
         if: runner.os == 'Linux'
         run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev
           chmod +x ./artifact/${{ matrix.artifact_name }}.AppImage
           ./artifact/${{ matrix.artifact_name }}.AppImage &
           sleep 3
@@ -159,7 +161,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           tar xvf ./artifact/${{ matrix.artifact_name }}.tar.gz
-          ./artifact/cremniy.app/Contents/MacOS/cremniy &
+          ./cremniy.app/Contents/MacOS/cremniy &
           sleep 3
           pkill cremniy
 
@@ -167,7 +169,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Expand-Archive -Path "${{ matrix.artifact_name }}.zip" -DestinationPath artifact
+          Expand-Archive -Path "artifact\${{ matrix.artifact_name }}.zip" -DestinationPath artifact
           $p = Start-Process -FilePath "artifact\cremniy.exe" -PassThru
           Start-Sleep -Seconds 3
           if ($p.HasExited) {
