@@ -19,7 +19,7 @@ jobs:
         include:
           # older versions of OS are used for wider accessibility
           # if they stop being compatible with newer OS versions - update them
-          - os: ubuntu-24.04
+          - os: ubuntu-22.04
             artifact_name: cremniy-linux-${{ github.ref_name }}
           - os: macos-14
             artifact_name: cremniy-macos-${{ github.ref_name }}
@@ -149,6 +149,9 @@ jobs:
       - name: Test executable (Linux)
         if: runner.os == 'Linux'
         run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-cursor0 libfuse2 file imagemagick
+
           chmod +x ./artifact/${{ matrix.artifact_name }}.AppImage
           ./artifact/${{ matrix.artifact_name }}.AppImage &
           sleep 3
