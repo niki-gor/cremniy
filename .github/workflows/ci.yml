@@ -23,7 +23,7 @@ jobs:
           - os: macos-14
             executable_path: build/cremniy.app/Contents/MacOS/cremniy
           - os: windows-2022
-            executable_path: build\cremniy.exe
+            executable_path: build\Release\cremniy.exe
 
     steps:
       - name: Checkout code
@@ -66,13 +66,13 @@ jobs:
         run: cmake --build build --config Release --parallel
       
       - name: Move executables to predefined path
-        run: mv ${{ matrix.executable_path }} cremniy-${{ runner.os }}.exe
+        run: mv ${{ matrix.executable_path }} cremniy.exe
 
       - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ runner.os }}
-          path: cremniy-${{ runner.os }}.exe
+          name: cremniy-${{ runner.os }}
+          path: cremniy.exe
           if-no-files-found: error
 
   test:
@@ -92,23 +92,23 @@ jobs:
       - name: Get executables
         uses: actions/download-artifact@v4
         with:
-          name: ${{ runner.os }}
-          path: cremniy-${{ runner.os }}.exe
+          name: cremniy-${{ runner.os }}
+          path: cremniy.exe
 
 
       - name: Test executable (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
-          cremniy-${{ runner.os }}.exe &
+          ./cremniy.exe &
           sleep 3
-          pkill cremniy-${{ runner.os }}.exe
+          pkill cremniy.exe
         # pkill must fail if application failed to start (i.e. already died)
 
       - name: Test executable (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $p = Start-Process "cremniy-${{ runner.os }}.exe" -PassThru
+          $p = Start-Process -FilePath "cremniy.exe" -PassThru
 
           Start-Sleep -Seconds 3
           if ($p.HasExited) {
