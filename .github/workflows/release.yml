@@ -113,9 +113,9 @@ jobs:
         with:
           name: ${{ matrix.artifact_name }}
           path: |
-            ${{ matrix.artifact_name }}.AppImage
             ${{ matrix.artifact_name }}.dmg
             ${{ matrix.artifact_name }}.zip
+            ${{ matrix.artifact_name }}.AppImage
           if-no-files-found: error
 
   test:
