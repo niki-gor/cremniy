@@ -196,9 +196,6 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Grant execution permissions to AppImage
-        run: chmod +x artifacts/**/*.AppImage
-
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
