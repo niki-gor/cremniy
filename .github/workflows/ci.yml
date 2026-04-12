@@ -71,7 +71,7 @@ jobs:
       - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
-          name: cremniy-${{ runner.os }}
+          name: cremniy-build-${{ runner.os }}
           path: cremniy.exe
           if-no-files-found: error
 
@@ -92,14 +92,15 @@ jobs:
       - name: Get executables
         uses: actions/download-artifact@v4
         with:
-          name: cremniy-${{ runner.os }}
-          path: cremniy.exe
+          name: cremniy-build-${{ runner.os }}
+          path: artifact
 
 
       - name: Test executable (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
-          ./cremniy.exe &
+          chmod +x ./artifact/cremniy.exe
+          ./artifact/cremniy.exe &
           sleep 3
           pkill cremniy.exe
         # pkill must fail if application failed to start (i.e. already died)
@@ -108,7 +109,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath "cremniy.exe" -PassThru
+          $p = Start-Process -FilePath "artifact\cremniy.exe" -PassThru
 
           Start-Sleep -Seconds 3
           if ($p.HasExited) {
