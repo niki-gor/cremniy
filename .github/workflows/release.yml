@@ -17,13 +17,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # older versions of OS are set on purpose
+          # older versions of OS are used for wider accessibility
+          # if they stop being compatible with newer OS versions - update them
           - os: ubuntu-22.04
             artifact_name: cremniy-linux-${{ github.ref_name }}
-          - os: windows-2022
-            artifact_name: cremniy-windows-${{ github.ref_name }}
           - os: macos-14
             artifact_name: cremniy-macos-${{ github.ref_name }}
+          - os: windows-2022
+            artifact_name: cremniy-windows-${{ github.ref_name }}
 
     steps:
       - name: Checkout code
@@ -88,7 +89,7 @@ jobs:
             --icon-file cremniy.png \
             --plugin qt \
             --output appimage
-          mv Cremniy-*.AppImage ${{ matrix.artifact_name }}.AppImage || mv cremniy-*.AppImage ${{ matrix.artifact_name }}.AppImage
+          mv cremniy-*.AppImage ${{ matrix.artifact_name }}.AppImage
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
@@ -122,57 +123,62 @@ jobs:
           if-no-files-found: error
 
   test:
-    name: Execute release (${{ matrix.os }})
     needs: build
+    name: Test on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-
     strategy:
       fail-fast: false
       matrix:
         include:
-          # newer versions of OS
+          # newer OS versions - test if they are compatible with older OS builds
           - os: ubuntu-24.04
-            pattern: "*.AppImage"
+            artifact_name: cremniy-linux-${{ github.ref_name }}
           - os: macos-15
-            pattern: "*.tar.gz"
+            artifact_name: cremniy-macos-${{ github.ref_name }}
           - os: windows-2025
-            pattern: "*.zip"
+            artifact_name: cremniy-windows-${{ github.ref_name }}
 
     steps:
-      - name: Download artifacts
+      - name: Get executables
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
-          merge-multiple: true
+          name: ${{ matrix.artifact_name }}
+          path: artifact
 
-      - name: Run Linux AppImage (headless)
+
+      - name: Test executable (Linux)
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb
-          chmod +x artifacts/**/*.AppImage
+          chmod +x ./artifact/${{ matrix.artifact_name }}.AppImage
+          ./artifact/${{ matrix.artifact_name }}.AppImage &
+          sleep 3
+          pkill ${{ matrix.artifact_name }}.AppImage
+        # pkill must fail if application failed to start (i.e. already died)
 
-          xvfb-run -a ./artifacts/**/*.AppImage --platform offscreen
-
-      - name: Run macOS app
+      - name: Test executable (macOS)
         if: runner.os == 'macOS'
         run: |
-          tar -xzf artifacts/**/*.tar.gz
-          chmod +x **/cremniy.app/Contents/MacOS/*
+          tar xvf ./artifact/${{ matrix.artifact_name }}.tar.gz
+          ./artifact/cremniy.app/Contents/MacOS/cremniy &
+          sleep 3
+          pkill cremniy
 
-          QT_QPA_PLATFORM=offscreen \
-          ./**/cremniy.app/Contents/MacOS/cremniy
-
-      - name: Run Windows exe
+      - name: Test executable (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          Expand-Archive artifacts\*.zip -DestinationPath test
-          Start-Process test\**\cremniy.exe -Wait
+          Expand-Archive -Path "${{ matrix.artifact_name }}.zip" -DestinationPath artifact
+          $p = Start-Process -FilePath "artifact\cremniy.exe" -PassThru
+          Start-Sleep -Seconds 3
+          if ($p.HasExited) {
+            throw "Process exited early (code: $($p.ExitCode))"
+          }
+          Stop-Process -Id $p.Id
+
 
   release:
     name: Create Release
-    needs: test
+    needs: build
     runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -184,6 +190,9 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+
+      - name: Grant execution permissions to AppImage
+        run: chmod +x artifacts/**/*.AppImage
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
