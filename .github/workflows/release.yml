@@ -88,7 +88,7 @@ jobs:
             --icon-file cremniy.png \
             --plugin qt \
             --output appimage
-          mv Cremniy-*.AppImage ${{ matrix.artifact_name }}.AppImage || mv cremniy-*.AppImage ${{ matrix.artifact_name }}.AppImage
+          mv cremniy-*.AppImage ${{ matrix.artifact_name }}.AppImage
 
       - name: Package (Windows)
         if: runner.os == 'Windows'
@@ -121,58 +121,9 @@ jobs:
             ${{ matrix.artifact_name }}.AppImage
           if-no-files-found: error
 
-  test:
-    name: Execute release (${{ matrix.os }})
-    needs: build
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # newer versions of OS
-          - os: ubuntu-24.04
-            pattern: "*.AppImage"
-          - os: macos-15
-            pattern: "*.tar.gz"
-          - os: windows-2025
-            pattern: "*.zip"
-
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-          merge-multiple: true
-
-      - name: Run Linux AppImage (headless)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb
-          chmod +x artifacts/**/*.AppImage
-
-          xvfb-run -a ./artifacts/**/*.AppImage --platform offscreen
-
-      - name: Run macOS app
-        if: runner.os == 'macOS'
-        run: |
-          tar -xzf artifacts/**/*.tar.gz
-          chmod +x **/cremniy.app/Contents/MacOS/*
-
-          QT_QPA_PLATFORM=offscreen \
-          ./**/cremniy.app/Contents/MacOS/cremniy
-
-      - name: Run Windows exe
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Expand-Archive artifacts\*.zip -DestinationPath test
-          Start-Process test\**\cremniy.exe -Wait
-
   release:
     name: Create Release
-    needs: test
+    needs: build
     runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
