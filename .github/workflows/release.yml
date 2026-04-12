@@ -106,22 +106,16 @@ jobs:
       - name: Package (macOS)
         if: runner.os == 'macOS'
         run: |
-          mkdir -p package
-          cp -r build/cremniy.app package/
-          macdeployqt package/cremniy.app
-          codesign --remove-signature package/cremniy.app
-          codesign --force --deep --sign - package/cremniy.app
-          cd package
-          tar -czf ../${{ matrix.artifact_name }}.tar.gz cremniy.app
+          macdeployqt build/cremniy.app -dmg
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: |
-            ${{ matrix.artifact_name }}.tar.gz
-            ${{ matrix.artifact_name }}.zip
             ${{ matrix.artifact_name }}.AppImage
+            ${{ matrix.artifact_name }}.dmg
+            ${{ matrix.artifact_name }}.zip
           if-no-files-found: error
 
   test:
@@ -163,10 +157,12 @@ jobs:
       - name: Test executable (macOS)
         if: runner.os == 'macOS'
         run: |
-          tar xvf ./artifact/${{ matrix.artifact_name }}.tar.gz
+          hdiutil attach ./artifact/${{ matrix.artifact_name }}.dmg
+          cp -r /Volumes/cremniy/cremniy.app .
           ./cremniy.app/Contents/MacOS/cremniy &
           sleep 3
           pkill cremniy
+          hdiutil detach /Volumes/cremniy
 
       - name: Test executable (Windows)
         if: runner.os == 'Windows'
@@ -195,9 +191,6 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
-
-      - name: Grant execution permissions to AppImage
-        run: chmod +x artifacts/**/*.AppImage
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
