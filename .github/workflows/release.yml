@@ -196,6 +196,10 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      - name: Make AppImage executable
+        run: |
+          find artifacts -name "*.AppImage" -exec chmod +x {} \;
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
