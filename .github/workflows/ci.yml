@@ -16,14 +16,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # older versions of OS are set on purpose
-          - os: ubuntu-24.04
-            executable_path: build/cremniy
-          - os: macos-15
-            executable_path: build/cremniy.app/Contents/MacOS/cremniy
-          - os: windows-2022
-            executable_path: build\Release\cremniy.exe
+        os:
+          # mainstream OS versions - standard for dev
+          - ubuntu-24.04
+          - macos-15
+          - windows-2025
 
     steps:
       - name: Checkout code
@@ -56,7 +53,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: cmake -B build -S src -DCMAKE_BUILD_TYPE=Release -G "Visual Studio 17 2022"
-      
+
       - name: Configure CMake (Linux/macOS)
         if: runner.os != 'Windows'
         run: cmake -B build -S src -DCMAKE_BUILD_TYPE=Release
@@ -64,57 +61,3 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release --parallel
-      
-      - name: Move executables to predefined path
-        run: mv ${{ matrix.executable_path }} cremniy.exe
-
-      - name: Upload executables
-        uses: actions/upload-artifact@v4
-        with:
-          name: cremniy-build-${{ runner.os }}
-          path: cremniy.exe
-          if-no-files-found: error
-
-  test:
-    needs: build
-    name: Test on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os:
-          # newer versions of OS
-          - ubuntu-24.04
-          - macos-15
-          - windows-2025
-
-    steps:
-      - name: Get executables
-        uses: actions/download-artifact@v4
-        with:
-          name: cremniy-build-${{ runner.os }}
-          path: artifact
-
-
-      - name: Test executable (Linux/macOS)
-        if: runner.os != 'Windows'
-        run: |
-          chmod +x ./artifact/cremniy.exe
-          ./artifact/cremniy.exe &
-          sleep 3
-          pkill cremniy.exe
-        # pkill must fail if application failed to start (i.e. already died)
-
-      - name: Test executable (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $p = Start-Process -FilePath "artifact\cremniy.exe" -PassThru
-
-          Start-Sleep -Seconds 3
-          if ($p.HasExited) {
-            Write-Error "Process exited too early"
-            exit 1
-          }
-
-          Stop-Process -Id $p.Id

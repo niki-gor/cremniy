@@ -17,13 +17,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # older versions of OS are set on purpose
+          # older versions of OS are used for wider accessibility
+          # if they stop being compatible with newer OS versions - update them
           - os: ubuntu-22.04
             artifact_name: cremniy-linux-${{ github.ref_name }}
-          - os: windows-2022
-            artifact_name: cremniy-windows-${{ github.ref_name }}
           - os: macos-14
             artifact_name: cremniy-macos-${{ github.ref_name }}
+          - os: windows-2022
+            artifact_name: cremniy-windows-${{ github.ref_name }}
 
     steps:
       - name: Checkout code
@@ -121,6 +122,60 @@ jobs:
             ${{ matrix.artifact_name }}.AppImage
           if-no-files-found: error
 
+  test:
+    needs: build
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # newer OS versions - test if they are compatible with older OS builds
+          - os: ubuntu-24.04
+            artifact_name: cremniy-linux-${{ github.ref_name }}
+          - os: macos-15
+            artifact_name: cremniy-macos-${{ github.ref_name }}
+          - os: windows-2025
+            artifact_name: cremniy-windows-${{ github.ref_name }}
+
+    steps:
+      - name: Get executables
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: artifact
+
+
+      - name: Test executable (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          chmod +x ./artifact/${{ matrix.artifact_name }}.AppImage
+          ./artifact/${{ matrix.artifact_name }}.AppImage &
+          sleep 3
+          pkill ${{ matrix.artifact_name }}.AppImage
+        # pkill must fail if application failed to start (i.e. already died)
+
+      - name: Test executable (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          tar xvf ./artifact/${{ matrix.artifact_name }}.tar.gz
+          ./artifact/cremniy.app/Contents/MacOS/cremniy &
+          sleep 3
+          pkill cremniy
+
+      - name: Test executable (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Expand-Archive -Path "${{ matrix.artifact_name }}.zip" -DestinationPath artifact
+          $p = Start-Process -FilePath "artifact\cremniy.exe" -PassThru
+          Start-Sleep -Seconds 3
+          if ($p.HasExited) {
+            throw "Process exited early (code: $($p.ExitCode))"
+          }
+          Stop-Process -Id $p.Id
+
+
   release:
     name: Create Release
     needs: build
@@ -135,6 +190,9 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+
+      - name: Grant execution permissions to AppImage
+        run: chmod +x artifacts/**/*.AppImage
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
