@@ -18,9 +18,9 @@ jobs:
       matrix:
         include:
           # older versions of OS are set on purpose
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             executable_path: build/cremniy
-          - os: macos-14
+          - os: macos-15
             executable_path: build/cremniy.app/Contents/MacOS/cremniy
           - os: windows-2022
             executable_path: build\Release\cremniy.exe
