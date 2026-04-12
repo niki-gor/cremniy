@@ -178,7 +178,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: build
+    needs: test
     runs-on: ubuntu-24.04
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
