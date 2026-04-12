@@ -157,7 +157,7 @@ jobs:
           chmod +x ./artifact/${{ matrix.artifact_name }}.AppImage
           xvfb-run ./artifact/${{ matrix.artifact_name }}.AppImage &
           sleep 3
-          pkill ${{ matrix.artifact_name }}.AppImage
+          pkill cremniy
         # pkill must fail if application failed to start (i.e. already died)
 
       - name: Test executable (macOS)
