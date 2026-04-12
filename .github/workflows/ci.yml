@@ -16,11 +16,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # older versions of OS are set on purpose
-        os:
-          - ubuntu-22.04
-          - macos-14
-          - windows-2022
+        include:
+          # older versions of OS are set on purpose
+          - os: ubuntu-22.04
+            executable_path: build/cremniy
+          - os: macos-14
+            executable_path: build/cremniy.app/Contents/MacOS/cremniy
+          - os: windows-2022
+            executable_path: build\cremniy.exe
 
     steps:
       - name: Checkout code
@@ -61,15 +64,15 @@ jobs:
 
       - name: Build
         run: cmake --build build --config Release --parallel
+      
+      - name: Move executables to predefined path
+        run: mv ${{ matrix.executable_path }} cremniy-${{ runner.os }}.exe
 
       - name: Upload executables
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.os }}
-          path: |
-            build/cremniy
-            build/cremniy.app/Contents/MacOS/cremniy
-            build/cremniy.exe
+          name: ${{ runner.os }}
+          path: cremniy-${{ runner.os }}.exe
           if-no-files-found: error
 
   test:
@@ -86,48 +89,26 @@ jobs:
           - windows-2025
 
     steps:
-      - name: Get executable (Linux)
-        if: runner.os == 'Linux'
+      - name: Get executables
         uses: actions/download-artifact@v4
         with:
-          name: Linux
-          path: build/cremniy
-
-      - name: Get executable (macOS)
-        if: runner.os == 'macOS'
-        uses: actions/download-artifact@v4
-        with:
-          name: macOS
-          path: build/cremniy.app/Contents/MacOS/cremniy
-
-      - name: Get executable (Windows)
-        if: runner.os == 'Windows'
-        uses: actions/download-artifact@v4
-        with:
-          name: Windows
-          path: build/cremniy.exe
+          name: ${{ runner.os }}
+          path: cremniy-${{ runner.os }}.exe
 
 
-      - name: Test executable (Linux)
-        if: runner.os == 'Linux'
+      - name: Test executable (Linux/macOS)
+        if: runner.os != 'Windows'
         run: |
-          ./build/cremniy &
+          cremniy-${{ runner.os }}.exe &
           sleep 3
-          pkill cremniy
+          pkill cremniy-${{ runner.os }}.exe
         # pkill must fail if application failed to start (i.e. already died)
-
-      - name: Test executable (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          ./build/cremniy.app/Contents/MacOS/cremniy &
-          sleep 3
-          pkill cremniy
 
       - name: Test executable (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $p = Start-Process "build/Release/cremniy.exe" -PassThru
+          $p = Start-Process "cremniy-${{ runner.os }}.exe" -PassThru
 
           Start-Sleep -Seconds 3
           if ($p.HasExited) {
