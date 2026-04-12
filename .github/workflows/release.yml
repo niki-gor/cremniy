@@ -109,6 +109,8 @@ jobs:
           mkdir -p package
           cp -r build/cremniy.app package/
           macdeployqt package/cremniy.app
+          codesign --remove-signature package/cremniy.app
+          codesign --force --deep --sign - package/cremniy.app
           cd package
           tar -czf ../${{ matrix.artifact_name }}.tar.gz cremniy.app
 
@@ -152,9 +154,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgl1-mesa-dev libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0 libxcb-cursor0 libfuse2 file imagemagick
 
-          export QT_QPA_PLATFORM=offscreen
           chmod +x ./artifact/${{ matrix.artifact_name }}.AppImage
-          ./artifact/${{ matrix.artifact_name }}.AppImage &
+          xvfb-run ./artifact/${{ matrix.artifact_name }}.AppImage &
           sleep 3
           pkill ${{ matrix.artifact_name }}.AppImage
         # pkill must fail if application failed to start (i.e. already died)
